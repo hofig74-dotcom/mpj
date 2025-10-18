@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ER:LC Interactive Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .navbar {
+            background: #16213e;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+
+        .branding {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4ecca3;
+        }
+
+        #map-section {
+            display: flex;
+            height: calc(100vh - 70px);
+            position: relative;
+        }
+
+        .selection-side {
+            width: 350px;
+            background: #16213e;
+            overflow-y: auto;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .selection-side::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .selection-side::-webkit-scrollbar-track {
+            background: #0f1419;
+        }
+
+        .selection-side::-webkit-scrollbar-thumb {
+            background: #4ecca3;
+            border-radius: 4px;
+        }
+
+        .list-title {
+            background: #0f1419;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+
+        .list-title:hover {
+            background: #1a2332;
+        }
+
+        .list-text {
+            font-weight: 600;
+            font-size: 16px;
+            flex: 1;
+            margin-left: 10px;
+        }
+
+        .expand-list {
+            color: #4ecca3;
+            transition: transform 0.3s;
+        }
+
+        .expand-list.expanded {
+            transform: rotate(180deg);
+        }
+
+        .list-items {
+            display: none;
+            margin-bottom: 15px;
+        }
+
+        .list-items.active {
+            display: block;
+        }
+
+        .list-item {
+            background: #1a2332;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .list-item:hover {
+            background: #243447;
+        }
+
+        .list-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 12px;
+        }
+
+        .list-item-text {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+            margin-right: 12px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #2c3e50;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+
+        input:checked + .slider {
+            background-color: #4ecca3;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .slider.round {
+            border-radius: 34px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        .listSwitch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+
+        #map {
+            flex: 1;
+            background: #0f1419;
+        }
+
+        .menu-toggle {
+            position: absolute;
+            left: 350px;
+            top: 20px;
+            z-index: 999;
+            background: #4ecca3;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: left 0.3s ease;
+        }
+
+        .menu-toggle:hover {
+            background: #6effc9;
+        }
+
+        .selection-side.hidden {
+            transform: translateX(-350px);
+        }
+
+        .menu-toggle.menu-hidden {
+            left: 10px;
+        }
+
+        .info-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0f1419;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .link-click {
+            color: #4ecca3;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .link-click:hover {
+            text-decoration: underline;
+        }
+
+        .leaflet-container {
+            background: #0f1419;
+        }
+
+        @media (max-width: 768px) {
+            .selection-side {
+                width: 100%;
+                position: absolute;
+                height: 100%;
+                z-index: 998;
+            }
+
+            .menu-toggle {
+                left: calc(100% - 50px);
+            }
+
+            .menu-toggle.menu-hidden {
+                left: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="branding">ER:LC Interactive Map</div>
+    </div>
+
+    <section id="map-section">
+        <button class="menu-toggle" id="menu-toggle" onclick="toggleMenu()">
+            <span class="material-symbols-outlined" id="menu-icon">chevron_left</span>
+        </button>
+
+        <div class="selection-side" id="selection-side">
+            <div class="selection-options">
+                <!-- General Group -->
+                <div class="list-title" onclick="toggleList('general')">
+                    <label class="listSwitch" onclick="event.stopPropagation()">
+                        <input type="checkbox" id="listswitch_general">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="list-text">General</span>
+                    <span class="material-symbols-outlined expand-list" id="arrow_general">expand_more</span>
+                </div>
+                <div class="list-items" id="list_general">
+                    <div class="list-item">
+                        <label class="switch">
+                            <input type="checkbox" id="switch_atm" onchange="toggleLayer(1)">
+                            <span class="slider round"></span>
+                        </label>
+                        <img class="list-icon" src="icons/atm.png">
+                        <span class="list-item-text">ATMs</span>
+                    </div>
+
+                    <div class="list-item">
+                        <label class="switch">
+                            <input type="checkbox" id="switch_bus" onchange="toggleLayer(2)">
+                            <span class="slider round"></span>
+                        </label>
+                        <img class="list-icon" src="icons/bus-stop.png">
+                        <span class="list-item-text">Bus Stops</span>
+                    </div>
+
+                    <div class="list-item">
+                        <label class="switch">
+                            <input type="checkbox" id="switch_ev" onchange="toggleLayer(3)">
+                            <span class="slider round"></span>
+                        </label>
+                        <img class="list-icon" src="icons/ev-charger.png">
+                        <span class="list-item-text">EV Chargers</span>
+                    </div>
+
+                    <div class="list-item">
+                        <label class="switch">
+                            <input type="checkbox" id="switch_gas" onchange="toggleLayer(8)">
+                            <span class="slider round"></span>
+                        </label>
+                        <img class="list-icon" src="icons/gas-pump.png">
+                        <span class="list-item-text">Gas Pumps</span>
+                    </div>
+
+                    <div class="list-item">
+                        <label class="switch">
+                            <input type="checkbox" id="switch_building" onchange="toggleLayer(16)">
+                            <span class="slider round"></span>
+                        </label>
+                        <img class="list-icon" src="icons/building.png">
+                        <span class="list-item-text">Buildings</span>
+                    </div>
+                </div>
+
+                <!-- Labels Group -->
+                <div class="list-title" onclick="toggleList('labels')">
+                    <label class="listSwitch" onclick="event.stopPropagation()">
+                        <input type="checkbox" id="listswitch_labels">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="list-text">Labels</span>
+                    <span class="material-symbols-outlined expand-list" id="arrow_labels">expand_more</span>
+                </div>
+                <div class="list-items" id="list_labels">
+                    <div class="list-item">
+                        <label class="switch">
+                            <input type="checkbox" id="switch_postal" onchange="toggleLayer(4)">
+                            <span class="slider round"></span>
+                        </label>
+                        <span class="list-item-text">Postal Codes</span>
+                    </div>
+
+                    <div class="list-item">
+                        <label class="switch">
+                            <input type="checkbox" id="switch_areas" onchange="toggleLayer(5)">
+                            <span class="slider round"></span>
+                        </label>
+                        <span class="list-item-text">Areas</span>
+                    </div>
+
+                    <div class="list-item">
+                        <label class="switch">
+                            <input type="checkbox" id="switch_streets" onchange="toggleLayer(6)">
+                            <span class="slider round"></span>
+                        </label>
+                        <span class="list-item-text">Street Names</span>
+                    </div>
+
+                    <div class="list-item">
+                        <label class="switch">
+                            <input type="checkbox" id="switch_building_numbers" onchange="toggleLayer(15)">
+                            <span class="slider round"></span>
+                        </label>
+                        <span class="list-item-text">Building Numbers</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <span>Version: 1.0.0</span><br>
+                    <span>Interactive Map for ER:LC</span><br>
+                    <span><a class="link-click" href="#" onclick="resetMap()">Reset Map</a></span>
+                </div>
+            </div>
+        </div>
+
+        <div id="map"></div>
+    </section>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="data.js"></script>
+    <script>
+        // Initialize map with CRS.Simple for custom coordinates
+        const map = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: 0,
+            maxZoom: 3,
+            zoomControl: true,
+            attributionControl: false
+        });
+
+        // Your map is 2x2 tiles, each 256px = 512x512 total per zoom
+        const bounds = [[0, 0], [512, 512]];
+        
+        // Custom tile layer with special naming: 0.png, 1.png, 2.png, 3.png
+        const CustomTileLayer = L.TileLayer.extend({
+            getTileUrl: function(coords) {
+                // Convert x,y coords to single number (0-3)
+                // 0,0 -> 0 | 1,0 -> 1
+                // 0,1 -> 2 | 1,1 -> 3
+                const tileNum = coords.y * 2 + coords.x;
+                return 'map/' + coords.z + '/' + tileNum + '.png';
+            }
+        });
+        
+        const tileLayer = new CustomTileLayer('', {
+            minZoom: 0,
+            maxZoom: 3,
+            tileSize: 256,
+            noWrap: true,
+            bounds: bounds
+        });
+        
+        tileLayer.addTo(map);
+        
+        // Set initial view to center of map
+        map.fitBounds(bounds);
+        map.setView([256, 256], 1);
+
+        // Layer groups
+        const layerGroups = {};
+
+        // Create icons from your data.js
+        const customIcons = {
+            atm: L.icon({ iconUrl: 'icons/atm.png', iconSize: [40, 40] }),
+            bus: L.icon({ iconUrl: 'icons/bus-stop.png', iconSize: [40, 40] }),
+            evcharger: L.icon({ iconUrl: 'icons/ev-charger.png', iconSize: [40, 40] }),
+            gaspump: L.icon({ iconUrl: 'icons/gas-pump.png', iconSize: [40, 40] }),
+            building: L.icon({ iconUrl: 'icons/building.png', iconSize: [40, 40] }),
+            smallhouse: L.icon({ iconUrl: 'icons/small-house.png', iconSize: [40, 40] }),
+            mediumhouse: L.icon({ iconUrl: 'icons/medium-house.png', iconSize: [40, 40] }),
+            largehouse: L.icon({ iconUrl: 'icons/large-house.png', iconSize: [40, 40] }),
+            singletrailer: L.icon({ iconUrl: 'icons/trailer-single.png', iconSize: [40, 40] }),
+            doubletrailer: L.icon({ iconUrl: 'icons/trailer-double.png', iconSize: [40, 40] }),
+            cabin: L.icon({ iconUrl: 'icons/cabin.png', iconSize: [40, 40] })
+        };
+
+        // Load layers from data.js
+        if (typeof layers !== 'undefined') {
+            layers.forEach(layer => {
+                if (layer.layer) {
+                    layerGroups[layer.id] = layer.layer;
+                }
+            });
+        }
+
+        // Toggle layer function
+        function toggleLayer(layerId) {
+            const layer = layerGroups[layerId];
+            if (!layer) return;
+            
+            if (map.hasLayer(layer)) {
+                map.removeLayer(layer);
+            } else {
+                map.addLayer(layer);
+            }
+        }
+
+        // Toggle functions
+        function toggleMenu() {
+            const sidebar = document.getElementById('selection-side');
+            const button = document.getElementById('menu-toggle');
+            const icon = document.getElementById('menu-icon');
+            
+            sidebar.classList.toggle('hidden');
+            button.classList.toggle('menu-hidden');
+            icon.textContent = sidebar.classList.contains('hidden') ? 'chevron_right' : 'chevron_left';
+        }
+
+        function toggleList(listId) {
+            const listElement = document.getElementById('list_' + listId);
+            const arrow = document.getElementById('arrow_' + listId);
+            
+            listElement.classList.toggle('active');
+            arrow.classList.toggle('expanded');
+        }
+
+        function resetMap() {
+            map.setView([256, 256], 1);
+            Object.values(layerGroups).forEach(layer => {
+                if (map.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+    </script>
+</body>
+</html>
